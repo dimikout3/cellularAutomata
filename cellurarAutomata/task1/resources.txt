@@ -1,0 +1,6 @@
+https://en.wikipedia.org/wiki/Cartesian_product
+
+https://www.geeksforgeeks.org/permutation-and-combination-in-python/
+https://stackoverflow.com/questions/3099987/generating-permutations-with-repetitions-in-python
+
+https://www.w3schools.com/python/ref_keyword_assert.asp

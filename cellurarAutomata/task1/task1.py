@@ -59,17 +59,23 @@ matrix = np.zeros([rows,columns], dtype=int)
 _, index = matrix.shape
 matrix[0][int(index/2)] = 1
 
-radius = 3
+radList = [1, 2, 3]
 
-rule = 30                               # Input to the rule_dictionary function.
-pattern_dic = rule_dictionary(rule)
+ruleList = [30, 90, 60, 110, 182, 250]
 
-matrix = simulation(matrix, pattern_dic)
+for rad in radList:
+    radius = rad
 
-print(pattern_dic)
-# print(matrix)
-plt.title("Rule "+str(rule))
-plt.imshow(matrix, cmap='binary')
-plt.show()
-# plt.savefig('Rule_'+str(rule)+'.jpg', bbox_inches="tight")
-# plt.close()
+    for rule in ruleList:
+        print('\nRule :',rule, ' Radius :',radius)
+        pattern_dic = rule_dictionary(rule)
+
+        matrix = simulation(matrix, pattern_dic)
+
+        print('Lookup table :',pattern_dic)
+        # print(matrix)
+        plt.title("Rule "+str(rule)+' Radius '+str(radius))
+        plt.imshow(matrix, cmap='binary')
+        # plt.show()
+        plt.savefig('Rule_'+str(rule)+'_Radius_'+str(radius)+'.jpg', bbox_inches="tight")
+        # plt.close()

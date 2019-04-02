@@ -6,7 +6,7 @@ def get_options():
 
     optParser = optparse.OptionParser()
 
-    optParser.add_option("-r", dest="radius", help="radius of the cycle", default = 5, type = "int")
+    optParser.add_option("-r", dest="radius", help="radius of the cycle", default = 7, type = "int")
     optParser.add_option("-x", dest="X_center", default = 20,
                          help="The X center of the cycle", type = "int")
     optParser.add_option("-y", dest="Y_center", help="The Y center of the cycle", default = 20, type = "int")
@@ -24,7 +24,7 @@ def run2(options):
     env = CellularAutomata(rows, columns)
 
     env.drawCycle(options.radius, options.X_center, options.Y_center)
-    env.applyNoiseBoundary()
+    env.applyNoiseRandom()
     # env.printCA()
     for i in range(6):
         env.printCA()

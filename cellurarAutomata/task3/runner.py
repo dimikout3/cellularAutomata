@@ -74,7 +74,7 @@ def getCurrentVοrtice(size):
     plt.quiver(X,Y,U,V,color_array,scale=size)
     plt.gca().invert_yaxis()
     plt.colorbar()
-    plt.title('Current Graph')
+    plt.title('Water Flow Graph')
     plt.show()
     plt.close()
 
@@ -87,8 +87,8 @@ def run(options):
 
     env =  CellularAutomata(rows, columns)
 
-    # currentV, currentT = getCurrentW2E(options.size, 20, 4)
-    currentV, currentT = getCurrentVοrtice(options.size)
+    currentV, currentT = getCurrentW2E(options.size, 35, 7)
+    # currentV, currentT = getCurrentVοrtice(options.size)
 
     env.addIsland(options.R_island, options.X_island, options.Y_island)
     env.addSource(options.X_oil, options.Y_oil)
@@ -96,9 +96,9 @@ def run(options):
 
     for i in range(options.time_steps):
         if (i%15==0):
-            env.printCA()
+            # env.printCA(step = i)
             print("-- Time Step: ",i)
-        env.step()
+        env.step(step = i )
 
 
 # this is the main entry point of this script

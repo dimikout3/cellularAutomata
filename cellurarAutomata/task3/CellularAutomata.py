@@ -14,6 +14,8 @@ class CellularAutomata:
         self.columns = columns
         self.env = np.zeros([rows,columns])
         self.water = (self.env == 0.0)
+        self.title = 'Oil Slick'
+        self.rI = 0
 
     def dist(self, x1, y1, x2, y2):
         return math.sqrt( ((x1-x2)**2) + ((y1-y2)**2) )
@@ -49,7 +51,7 @@ class CellularAutomata:
                 self.current[i][j]['SE'] = V[i][j]*np.cos(T[i][j] - np.pi/4)
                 self.current[i][j]['SW'] = -V[i][j]*np.sin(np.pi/4 + T[i][j])
 
-    def printCA(self):
+    def printCA(self, step=None):
 
         cmapSea = plt.cm.get_cmap('bone_r',100)
         cmapTerain = plt.cm.get_cmap('pink',self.rI)
@@ -68,14 +70,47 @@ class CellularAutomata:
         plt.imshow(image, cmap=cmapSea)
         # plt.imshow(self.water)
         plt.colorbar()
+
+        if set != None:
+            plt.title(self.title + '- Time Step : '+str(step))
+        else:
+            plt.title(self.title)
+
+        plt.xlabel('X - Axis')
+        plt.ylabel('Y - Axis')
         plt.show()
         plt.close()
 
-    def saveStep(self, timeStep = None):
-        plt.imshow(self.env, cmap='gray')
+    def saveStep(self, step = None):
+
+        cmapSea = plt.cm.get_cmap('bone_r',100)
+        cmapTerain = plt.cm.get_cmap('pink',self.rI)
+
+        image = [[j for j in range(self.columns)] for i in range(self.rows)]
+
+        for i in range(self.rows):
+            for j in range(self.columns):
+                if self.water[i][j]:
+                    image[i][j] = cmapSea(self.env[i][j])
+                else:
+                    d = self.dist(i, j, self.xI, self.yI)
+                    indx = 1/d if d!=0 else 0.
+                    image[i][j] = cmapTerain(indx)
+
+        # plt.imshow(image, cmap=cmapSea, interpolation='bilinear')
+        plt.imshow(image, cmap=cmapSea)
+        # plt.imshow(self.water)
         plt.colorbar()
-        plt.title(self.title+'\nTime Step: '+str(timeStep))
-        plt.savefig('results/'+self.title+' Time_Step_'+str(timeStep))
+
+        if set != None:
+            plt.title(self.title + '- Time Step : '+str(step))
+        else:
+            plt.title(self.title)
+
+        plt.xlabel('X - Axis')
+        plt.ylabel('Y - Axis')
+
+        plt.savefig('results/'+self.title+' Time Step '+str(step))
         plt.close()
 
     def OilMassTranssfer(self, next, r, c):
@@ -112,9 +147,9 @@ class CellularAutomata:
         next[r][c] -= next[r][c]*E
         if (next[r][c] <= 0.): next[r][c] = 0.
 
-    def step(self, timeStep = None):
+    def step(self, step = None):
 
-        # self.saveStep(timeStep = timeStep)
+        if (step % 5 == 0) :self.saveStep(step = step)
 
         oilMass = np.zeros([self.rows, self.columns])
         evapor = np.zeros([self.rows, self.columns])

@@ -3,7 +3,7 @@ import math
 import matplotlib.pyplot as plt
 import pdb
 
-M = 0.5
+M = 0.1
 d = 0.7
 E = 0.01
 
@@ -30,8 +30,23 @@ class CellularAutomata:
         self.Y_source = y
         self.env[x][y] = 1.0
 
+    def addCurrent(self, V, T):
+
+        self.current = [[{} for j in range(self.columns)] for i in range(self.rows)]
+
+        for i in range(self.rows):
+            for j in range(self.columns):
+                self.current[i][j]['N'] = V[i][j]*np.sin(T[i][j])
+                self.current[i][j]['S'] = -V[i][j]*np.sin(T[i][j])
+                self.current[i][j]['W'] = -V[i][j]*np.cos(T[i][j])
+                self.current[i][j]['E'] = V[i][j]*np.cos(T[i][j])
+                self.current[i][j]['NE'] = V[i][j]*np.sin(np.pi/4 + T[i][j])
+                self.current[i][j]['NW'] = -V[i][j]*np.cos(T[i][j] - np.pi/4)
+                self.current[i][j]['SE'] = V[i][j]*np.cos(T[i][j] - np.pi/4)
+                self.current[i][j]['SW'] = -V[i][j]*np.sin(np.pi/4 + T[i][j])
+
     def printCA(self):
-        plt.imshow(self.env, cmap='gray_r')
+        plt.imshow(self.env, cmap='bone_r')
         # plt.imshow(self.water)
         plt.colorbar()
         plt.show()
@@ -59,6 +74,21 @@ class CellularAutomata:
 
         next[r][c] = ego + M*(n + s + w + e) + M*d*(nw + ne + sw + se)
 
+    def Current(self, next, r, c):
+
+        ego = self.env[r][c]
+
+        n = (self.env[r-1][c] - ego)*self.current[r][c]['S']
+        nw = (self.env[r-1][c-1] - ego)*self.current[r][c]['SE']
+        ne = (self.env[r-1][c+1] - ego)*self.current[r][c]['SW']
+        s = (self.env[r+1][c] - ego)*self.current[r][c]['N']
+        sw = (self.env[r+1][c-1] - ego)*self.current[r][c]['NE']
+        se = (self.env[r+1][c+1] - ego)*self.current[r][c]['NW']
+        w = (self.env[r][c-1] - ego)*self.current[r][c]['E']
+        e = (self.env[r][c+1] - ego)*self.current[r][c]['W']
+
+        next[r][c] = M*(n + s + w + e) + M*d*(nw + ne + sw + se)
+
     def Evaporation(self, next, r, c):
         next[r][c] -= next[r][c]*E
         if (next[r][c] <= 0.): next[r][c] = 0.
@@ -67,17 +97,22 @@ class CellularAutomata:
 
         # self.saveStep(timeStep = timeStep)
 
-        next = np.zeros([self.rows, self.columns])
+        oilMass = np.zeros([self.rows, self.columns])
+        evapor = np.zeros([self.rows, self.columns])
+        curr = np.zeros([self.rows, self.columns])
 
         for r in range(1, self.rows - 1):
             for c in range(1, self.columns - 1):
 
                 if(self.water[r][c]):
-                    self.OilMassTranssfer(next, r, c)
-                    # self.Evaporation(next, r, c)
+                    self.OilMassTranssfer(oilMass, r, c)
+                    self.Evaporation(evapor, r, c)
+                    self.Current(curr, r, c)
 
-        # self.env = self.env + next
-        # self.env[self.env >= 1.] = 1.
-        self.env = next
+        self.env = self.env*0.1 + oilMass + evapor + curr
+        self.env[self.env >= 1.] = 1.
+        # self.env = next
         self.env[self.X_source][self.Y_source] = 1.
-        print('Sum = ',np.sum(self.env))
+        # count_nonzero
+        # print('Non Zero Elements  = ',np.count_nonzero(self.env))
+        # print('Sum = ',np.sum(self.env))

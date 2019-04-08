@@ -20,6 +20,10 @@ class CellularAutomata:
 
     def addIsland(self, r, Xcenter, Ycenter):
 
+        self.xI = Xcenter
+        self.yI = Ycenter
+        self.rI = r
+
         for x in range(Xcenter-r, Xcenter+r+1):
             for y in range(Ycenter-r, Ycenter+r+1):
                 if self.dist(x, y, Xcenter, Ycenter) < r:
@@ -46,7 +50,22 @@ class CellularAutomata:
                 self.current[i][j]['SW'] = -V[i][j]*np.sin(np.pi/4 + T[i][j])
 
     def printCA(self):
-        plt.imshow(self.env, cmap='bone_r')
+
+        cmapSea = plt.cm.get_cmap('bone_r',100)
+        cmapTerain = plt.cm.get_cmap('pink',self.rI)
+
+        image = [[j for j in range(self.columns)] for i in range(self.rows)]
+
+        for i in range(self.rows):
+            for j in range(self.columns):
+                if self.water[i][j]:
+                    image[i][j] = cmapSea(self.env[i][j])
+                else:
+                    d = self.dist(i, j, self.xI, self.yI)
+                    indx = 1/d if d!=0 else 0.
+                    image[i][j] = cmapTerain(indx)
+
+        plt.imshow(image, cmap=cmapSea)
         # plt.imshow(self.water)
         plt.colorbar()
         plt.show()

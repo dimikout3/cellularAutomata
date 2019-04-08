@@ -90,7 +90,7 @@ def run(options):
     # currentV, currentT = getCurrentW2E(options.size, 20, 4)
     currentV, currentT = getCurrentVοrtice(options.size)
 
-    # env.addIsland(options.R_island, options.X_island, options.Y_island)
+    env.addIsland(options.R_island, options.X_island, options.Y_island)
     env.addSource(options.X_oil, options.Y_oil)
     env.addCurrent(currentV, currentT)
 

@@ -52,15 +52,16 @@ def step(previous, pattern_dic):
 
     return nextState
 
-# number of distinct values (binary = 2)
+# number of distinct values-states (binary = 2)
 distinct = 3
 
-# number of left and right cells (default = 1)
-radius = 1
+# examples = 10
+# distinctList = [3, 4, 5, 6]
+# radList = [1, 2, 3]
 
-examples = 10
-distinctList = [3, 4, 5, 6]
-radList = [1, 2, 3]
+examples = 1
+distinctList = [3]
+radList = [1]
 
 for distinct in distinctList:
     for rad in radList:
@@ -97,6 +98,6 @@ for distinct in distinctList:
             # put those patched as legend-handles into the legend
             plt.legend(handles=patches, bbox_to_anchor=(1.0, 1.0), loc=2)
 
-            # plt.show()
-            plt.savefig('Mul/Classes_'+str(distinct)+'_Radius_'+str(radius)+'_Example_'+str(example)+'.jpg', bbox_inches="tight")
+            plt.show()
+            # plt.savefig('Mul/Classes_'+str(distinct)+'_Radius_'+str(radius)+'_Example_'+str(example)+'.jpg', bbox_inches="tight")
             plt.close()

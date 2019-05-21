@@ -59,11 +59,11 @@ matrix = np.zeros([rows,columns], dtype=int)
 _, index = matrix.shape
 matrix[0][int(index/2)] = 1
 
-radList = [1, 2, 3]
+radiusList = [1, 2, 3]
 
 ruleList = [30, 90, 60, 110, 182, 250]
 
-for rad in radList:
+for rad in radiusList:
     radius = rad
 
     for rule in ruleList:

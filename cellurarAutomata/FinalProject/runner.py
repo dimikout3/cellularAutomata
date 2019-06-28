@@ -16,7 +16,7 @@ def get_options():
                          help="The X center of the island", type = "int")
     optParser.add_option("--yI", dest="Y_island", help="The Y center of the island", default = 20, type = "int")
     optParser.add_option("-s", dest="size", help="The size of the enviroment", default = 40, type = "int")
-    optParser.add_option("-t", dest="time_steps", help="The total number of time steps", default = 6, type = "int")
+    optParser.add_option("-t", dest="time_steps", help="The total number of time steps", default = 15, type = "int")
     optParser.add_option("--xO", dest="X_oil", default = 15,
                          help="The X coordinate of the oil source", type = "int")
     optParser.add_option("--yO", dest="Y_oil", help="The Y coordinate of the oil source", default = 30, type = "int")
@@ -38,12 +38,12 @@ def run(options):
     for i in range(options.time_steps):
         atari.render()
 
-        # envCA.step()
+        action = envCA.step(observation)
 
-        observation, reward, done, info = atari.step(3) # take a random action
-        time.sleep(0.5)
+        observation, reward, done, info = atari.step(action) # take a random action
+        time.sleep(0.1)
 
-        envCA.print()
+        # envCA.print()
 
     atari.close()
 

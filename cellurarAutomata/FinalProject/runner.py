@@ -42,6 +42,7 @@ def run(options):
 
         observation, reward, done, info = atari.step(action) # take a random action
         time.sleep(0.1)
+        # pdb.set_trace()
 
         # envCA.print()
 

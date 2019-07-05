@@ -5,13 +5,26 @@ import pdb
 
 utilityDecay = 0.975
 
+NEGATIVE_VEH_DECAY = 0.87
+
+POLICE_DECAY = 0.8
+
+VEH_RANGE = 40
+POLICE_RANGE = 30
+BANK_RANGE = 90
+
 # car  -> rgb(223, 183, 85)
 # bank -> rgb(214, 214, 214)
 # wall -> rgb(187,187,53)
 # free -> rgb(0,0,0)
+# police -> rgb(24,26,167)
 
 WEAKSIDE = 1
 STRONGSIDE = 10
+
+VERBOSE = True
+INFO = True
+SIM = True
 
 MOVE_2_ACTION = {"UP":2,
                  "RIGHT":3,
@@ -33,12 +46,12 @@ class CellularAutomata:
         self.freeSpace = self.observation != np.array([187,187,53])
         self.freeSpace[99:140,12,:] = False
         self.freeSpace[99:140,147,:] = False
-        # pdb.set_trace()
 
         self.previousBankLocation = self.observation == np.array([214, 214, 214])
-        # pdb.set_trace()
-
         self.currentBankLocation = self.previousBankLocation
+
+        self.previousPoliceLocation = self.observation == np.array([24,26,167])
+        self.currentPoliceLocation = self.previousPoliceLocation
 
         (self.rows,self.columns,_) = self.freeSpace.shape
 
@@ -48,15 +61,28 @@ class CellularAutomata:
         self.updateCounter = 0
 
         # self.updateUtility(self.previousBankLocation[:,:,0])
-        self.upadateUtilityDual()
+        self.updateUtilityMulti()
+
+
+    def distance(self, x, y, x2, y2):
+
+        d = math.sqrt( ((x-x2)**2) + ((y-y2)**2) )
+
+        if d<1:d = 1
+
+        return d
 
 
     def positiveUtility(self):
+
+        if VERBOSE and INFO:
+            print('[INFO]: calculating positive utility for banks')
+
         rtn = np.zeros([self.rows, self.columns])
 
         rtn[self.currentBankLocation[:,:,0]] = 1.0
 
-        for i in range(90):
+        for i in range(BANK_RANGE):
             (x,y) = np.where(rtn>0.)
 
             for x2,y2 in zip(x,y):
@@ -83,15 +109,19 @@ class CellularAutomata:
         # plt.show()
         return rtn
 
-    def negativeUtility(self):
+
+    def negativeUtilityVeh(self):
+
+        if VERBOSE and INFO:
+            print('[INFO]: calculating negative utility for ego veh')
 
         rtn = np.zeros([self.rows, self.columns])
 
         xEgo,yEgo = self.locateEgoVeh()
 
-        rtn[xEgo][yEgo] = 1.0
+        rtn[xEgo][yEgo] = 2.0
 
-        for i in range(90):
+        for i in range(VEH_RANGE):
             (x,y) = np.where(rtn>0.)
 
             for x2,y2 in zip(x,y):
@@ -104,7 +134,8 @@ class CellularAutomata:
 
                 avgMatrix = np.array([ego,down,left,right,up])
                 avgWeights = avgMatrix != 0
-                utilityValue = np.average(avgMatrix, weights=avgWeights)*utilityDecay
+                # dist = self.distance(xEgo, yEgo, x2, y2)
+                utilityValue = np.average(avgMatrix, weights=avgWeights)*NEGATIVE_VEH_DECAY
                 # utilityValue = ego*utilityDecay
 
                 rtn[x2][y2+1] = utilityValue if (rtn[x2][y2+1]==0. and self.freeSpace[x2][y2+1][0] ) else rtn[x2][y2+1]
@@ -114,13 +145,51 @@ class CellularAutomata:
 
         return rtn*(-1)
 
-    def upadateUtilityDual(self):
+
+    def negativeUtilityPol(self):
+
+        if VERBOSE and INFO:
+            print('[INFO]: calculating negative police utility')
+
+        rtn = np.zeros([self.rows, self.columns])
+
+        rtn[self.currentPoliceLocation[:,:,0]] = 1.0
+
+        for i in range(POLICE_RANGE):
+            (x,y) = np.where(rtn>0.)
+
+            for x2,y2 in zip(x,y):
+
+                ego = rtn[x2][y2]
+                down = rtn[x2+1][y2]
+                up = rtn[x2-1][y2]
+                right = rtn[x2][y2+1]
+                left = rtn[x2][y2-1]
+
+                avgMatrix = np.array([ego,down,left,right,up])
+                avgWeights = avgMatrix != 0
+                utilityValue = np.average(avgMatrix, weights=avgWeights)*POLICE_DECAY
+                # utilityValue = ego*utilityDecay
+
+                rtn[x2][y2+1] = utilityValue if (rtn[x2][y2+1]==0. and self.freeSpace[x2][y2+1][0] ) else rtn[x2][y2+1]
+                rtn[x2][y2-1] = utilityValue if (rtn[x2][y2-1]==0. and self.freeSpace[x2][y2-1][0] ) else rtn[x2][y2-1]
+                rtn[x2-1][y2] = utilityValue if (rtn[x2-1][y2]==0. and self.freeSpace[x2-1][y2][0] ) else rtn[x2-1][y2]
+                rtn[x2+1][y2] = utilityValue if (rtn[x2+1][y2]==0. and self.freeSpace[x2+1][y2][0] ) else rtn[x2+1][y2]
+
+        return rtn*(-1)
+
+
+    def updateUtilityMulti(self):
+
+        if VERBOSE and INFO:
+            print('[INFO]: updating utility ...')
 
         posUtility = self.positiveUtility()
-        negUtility = self.negativeUtility()
+        negVehUtility = self.negativeUtilityVeh()
+        negPoliceUtily = self.negativeUtilityPol()
 
-        self.utility = posUtility + negUtility
-        # self.print()
+        self.utility = posUtility + negVehUtility + negPoliceUtily
+        self.print(self.utility)
 
 
     def updateUtility(self, banks):
@@ -151,14 +220,14 @@ class CellularAutomata:
 
         self.updateCounter += 10
 
-    def print(self):
+    def print(self,img):
 
         # plt.imshow(self.freeSpace[:,:,0],cmap='gray')
         # plt.imshow(self.previousBankLocation[:,:,0],cmap='gray')
-        plt.imshow(self.utility,cmap='gray')
-
+        plt.imshow(img,cmap='gray')
         plt.colorbar()
         plt.show()
+        plt.close()
 
     def locateEgoVeh(self):
 
@@ -167,7 +236,7 @@ class CellularAutomata:
 
         (x,y) = np.where(egoVeh[:,:,0])
 
-        return x[12],y[12]
+        return x[10],y[10]
 
     def updatesurroundingUtility(self,x,y):
 
@@ -192,10 +261,14 @@ class CellularAutomata:
                         # "DOWNRIGHT":np.average(downRightMatrix, weights = downRightMatrix!= 0.),
                         # "DOWNLEFT":np.average(downLeftMatrxi, weights = downLeftMatrxi!= 0.) }
 
-        print(surr_utility)
+        if VERBOSE and SIM:
+            print('[SIM]: surrounding utility dict',surr_utility)
+
         return max(surr_utility,key=surr_utility.get)
 
     def step(self, observationEnv):
+
+        if VERBOSE:print('\n-------- sim step: ',self.simStep)
 
         self.observation = observationEnv
 
@@ -203,17 +276,36 @@ class CellularAutomata:
         # print('ego veh is located at:',x,y)
 
         self.currentBankLocation = self.observation == np.array([214, 214, 214])
+        self.currentPoliceLocation = self.observation == np.array([24,26,167])
 
-        if ( (self.currentBankLocation != self.previousBankLocation).any()):
+        updateStep = (self.simStep%5 == 0)
+
+        if (self.currentBankLocation != self.previousBankLocation).any() and (updateStep):
+
+            if VERBOSE and SIM:
+                print('[SIM]: Difference in Bank Locations')
+
             self.utility = np.zeros([self.rows, self.columns])
-            # self.updateUtility(self.currentBankLocation[:,:,0])
-            self.upadateUtilityDual()
+
+            self.updateUtilityMulti()
             self.previousBankLocation = self.currentBankLocation
-            print('Updating bank locations')
-            self.print()
+
+        elif (self.currentPoliceLocation != self.previousPoliceLocation).any() and (updateStep):
+
+            if VERBOSE and SIM:
+                print('[SIM]: Difference in Police Car Locations')
+
+            self.utility = np.zeros([self.rows, self.columns])
+
+            self.updateUtilityMulti()
+            self.previousPoliceLocation = self.currentPoliceLocation
+
+
 
         s_utility = self.updatesurroundingUtility(x,y)
-        print(s_utility)
+
+        if VERBOSE and SIM:
+            print('[SIM]: Next action is',s_utility)
 
         self.simStep += 1
 

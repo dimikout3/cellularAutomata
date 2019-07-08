@@ -192,34 +192,6 @@ class CellularAutomata:
         self.print(self.utility)
 
 
-    def updateUtility(self, banks):
-
-        self.utility[self.previousBankLocation[:,:,0]] = -2.0 - self.updateCounter
-        self.utility[banks==True] = 1.0 + self.updateCounter
-
-        for i in range(90):
-            (x,y) = np.where(self.utility>0.)
-
-            for x2,y2 in zip(x,y):
-
-                ego = self.utility[x2][y2]
-                down = self.utility[x2+1][y2]
-                up = self.utility[x2-1][y2]
-                right = self.utility[x2][y2+1]
-                left = self.utility[x2][y2-1]
-
-                avgMatrix = np.array([ego,down,left,right,up])
-                avgWeights = avgMatrix != 0
-                utilityValue = np.average(avgMatrix, weights=avgWeights)*utilityDecay
-                # utilityValue = ego*utilityDecay
-
-                self.utility[x2][y2+1] = utilityValue if (self.utility[x2][y2+1]==0. and self.freeSpace[x2][y2+1][0] ) else self.utility[x2][y2+1]
-                self.utility[x2][y2-1] = utilityValue if (self.utility[x2][y2-1]==0. and self.freeSpace[x2][y2-1][0] ) else self.utility[x2][y2-1]
-                self.utility[x2-1][y2] = utilityValue if (self.utility[x2-1][y2]==0. and self.freeSpace[x2-1][y2][0] ) else self.utility[x2-1][y2]
-                self.utility[x2+1][y2] = utilityValue if (self.utility[x2+1][y2]==0. and self.freeSpace[x2+1][y2][0] ) else self.utility[x2+1][y2]
-
-        self.updateCounter += 10
-
     def print(self,img):
 
         # plt.imshow(self.freeSpace[:,:,0],cmap='gray')
@@ -229,6 +201,7 @@ class CellularAutomata:
         plt.show()
         plt.close()
 
+
     def locateEgoVeh(self):
 
         egoVeh = self.observation == np.array([223, 183, 85])
@@ -237,6 +210,7 @@ class CellularAutomata:
         (x,y) = np.where(egoVeh[:,:,0])
 
         return x[10],y[10]
+
 
     def updatesurroundingUtility(self,x,y):
 
@@ -265,6 +239,7 @@ class CellularAutomata:
             print('[SIM]: surrounding utility dict',surr_utility)
 
         return max(surr_utility,key=surr_utility.get)
+
 
     def step(self, observationEnv):
 

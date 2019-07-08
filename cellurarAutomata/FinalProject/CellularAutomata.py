@@ -2,16 +2,21 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 import pdb
+import time
 
 utilityDecay = 0.975
 
-NEGATIVE_VEH_DECAY = 0.87
+NEGATIVE_VEH_DECAY = 0.9
 
-POLICE_DECAY = 0.8
+POLICE_DECAY = 0.9
 
 VEH_RANGE = 40
-POLICE_RANGE = 30
+POLICE_RANGE = 40
 BANK_RANGE = 90
+
+UPDATEMOD = 15
+
+DIST = 30
 
 # car  -> rgb(223, 183, 85)
 # bank -> rgb(214, 214, 214)
@@ -135,7 +140,7 @@ class CellularAutomata:
                 avgMatrix = np.array([ego,down,left,right,up])
                 avgWeights = avgMatrix != 0
                 # dist = self.distance(xEgo, yEgo, x2, y2)
-                utilityValue = np.average(avgMatrix, weights=avgWeights)*NEGATIVE_VEH_DECAY
+                utilityValue = np.average(avgMatrix, weights=avgWeights)*NEGATIVE_VEH_DECAY*(((VEH_RANGE-i)/VEH_RANGE)**2)
                 # utilityValue = ego*utilityDecay
 
                 rtn[x2][y2+1] = utilityValue if (rtn[x2][y2+1]==0. and self.freeSpace[x2][y2+1][0] ) else rtn[x2][y2+1]
@@ -168,7 +173,7 @@ class CellularAutomata:
 
                 avgMatrix = np.array([ego,down,left,right,up])
                 avgWeights = avgMatrix != 0
-                utilityValue = np.average(avgMatrix, weights=avgWeights)*POLICE_DECAY
+                utilityValue = np.average(avgMatrix, weights=avgWeights)*POLICE_DECAY*(((POLICE_RANGE-i)/POLICE_RANGE)**2)
                 # utilityValue = ego*utilityDecay
 
                 rtn[x2][y2+1] = utilityValue if (rtn[x2][y2+1]==0. and self.freeSpace[x2][y2+1][0] ) else rtn[x2][y2+1]
@@ -185,20 +190,22 @@ class CellularAutomata:
             print('[INFO]: updating utility ...')
 
         posUtility = self.positiveUtility()
-        negVehUtility = self.negativeUtilityVeh()
         negPoliceUtily = self.negativeUtilityPol()
+        negVehUtility = self.negativeUtilityVeh()
 
-        self.utility = posUtility + negVehUtility + negPoliceUtily
-        self.print(self.utility)
+        self.utility = posUtility + negPoliceUtily + negVehUtility
+        self.print(self.utility, title='Aggregated Utility')
 
 
-    def print(self,img):
+    def print(self,img, title='No Title Given'):
 
         # plt.imshow(self.freeSpace[:,:,0],cmap='gray')
         # plt.imshow(self.previousBankLocation[:,:,0],cmap='gray')
-        plt.imshow(img,cmap='gray')
+        plt.imshow(img,cmap='jet')
+        plt.title(title + str(self.simStep))
         plt.colorbar()
-        plt.show()
+        plt.show(block=False)
+        plt.pause(3)
         plt.close()
 
 
@@ -209,7 +216,17 @@ class CellularAutomata:
 
         (x,y) = np.where(egoVeh[:,:,0])
 
-        return x[10],y[10]
+        return x[5],y[5]
+
+
+    def locatePoliceVeh(self):
+
+        policeVeh = self.observation == np.array([24,26,167])
+        policeVeh[0:60,:,:]=False
+
+        (x,y) = np.where(policeVeh[:,:,0])
+
+        return x[0],y[0]
 
 
     def updatesurroundingUtility(self,x,y):
@@ -243,6 +260,8 @@ class CellularAutomata:
 
     def step(self, observationEnv):
 
+        start_time = time.time()
+
         if VERBOSE:print('\n-------- sim step: ',self.simStep)
 
         self.observation = observationEnv
@@ -253,7 +272,7 @@ class CellularAutomata:
         self.currentBankLocation = self.observation == np.array([214, 214, 214])
         self.currentPoliceLocation = self.observation == np.array([24,26,167])
 
-        updateStep = (self.simStep%5 == 0)
+        updateStep = (self.simStep%UPDATEMOD == 0)
 
         if (self.currentBankLocation != self.previousBankLocation).any() and (updateStep):
 
@@ -267,13 +286,18 @@ class CellularAutomata:
 
         elif (self.currentPoliceLocation != self.previousPoliceLocation).any() and (updateStep):
 
-            if VERBOSE and SIM:
-                print('[SIM]: Difference in Police Car Locations')
+            xPolice, yPolice = self.locatePoliceVeh()
+            dist = self.distance(x,y,xPolice, yPolice)
 
-            self.utility = np.zeros([self.rows, self.columns])
+            if dist<DIST:
 
-            self.updateUtilityMulti()
-            self.previousPoliceLocation = self.currentPoliceLocation
+                if VERBOSE and SIM:
+                    print('[SIM]: Difference in Police Car Locations')
+
+                self.utility = np.zeros([self.rows, self.columns])
+
+                self.updateUtilityMulti()
+                self.previousPoliceLocation = self.currentPoliceLocation
 
 
 
@@ -283,5 +307,10 @@ class CellularAutomata:
             print('[SIM]: Next action is',s_utility)
 
         self.simStep += 1
+
+        elapsed_time = time.time() - start_time
+
+        if VERBOSE and SIM:
+            print('[SIM]: Simulation step elapsed after {} [sec]'.format(elapsed_time))
 
         return MOVE_2_ACTION[s_utility]

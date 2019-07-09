@@ -17,6 +17,9 @@ BANK_RANGE = 90
 UPDATEMOD = 5
 DIST = 30
 
+UPDATE_INTERVAL_BANK = 15
+UPDATE_INTERVAL_POLICE = 5
+
 # car  -> rgb(223, 183, 85)
 # bank -> rgb(214, 214, 214)
 # wall -> rgb(187,187,53)
@@ -70,6 +73,9 @@ class CellularAutomata:
         self.updateUtilityBanks()
 
         self.aggregateUtility()
+
+        self.updateStepBank = UPDATE_INTERVAL_BANK
+        self.updateStepPolice = UPDATE_INTERVAL_POLICE
 
         # self.updateUtility(self.previousBankLocation[:,:,0])
         # self.updateUtilityMulti()
@@ -288,9 +294,10 @@ class CellularAutomata:
         self.currentBankLocation = self.observation == np.array([214, 214, 214])
         self.currentPoliceLocation = self.observation == np.array([24,26,167])
 
-        updateStep = (self.simStep%UPDATEMOD == 0)
+        # updateStepBanks = (self.simStep%UPDATEMOD == 0)
+        # updateStepPolice =
 
-        if (self.currentBankLocation != self.previousBankLocation).any() and (updateStep):
+        if (self.currentBankLocation != self.previousBankLocation).any() and (self.updateStepBank <= self.simStep):
 
             if VERBOSE and SIM:
                 print('[SIM]: Difference in Bank Locations')
@@ -305,9 +312,11 @@ class CellularAutomata:
 
             self.previousBankLocation = self.currentBankLocation
 
+            self.updateStepBank = self.simStep + UPDATE_INTERVAL_BANK
+
             self.print(self.utility, title="Aggregated Utility")
 
-        if (self.currentPoliceLocation != self.previousPoliceLocation).any() and (updateStep):
+        if (self.currentPoliceLocation != self.previousPoliceLocation).any() and (self.updateStepPolice <= self.simStep):
 
             xPolice, yPolice = self.locatePoliceVeh()
             dist = self.distance(x,y,xPolice, yPolice)
@@ -324,6 +333,8 @@ class CellularAutomata:
                 self.aggregateUtility()
 
                 self.previousPoliceLocation = self.currentPoliceLocation
+
+                self.updateStepPolice = self.simStep + UPDATE_INTERVAL_POLICE
 
                 self.print(self.utility, title="Aggregated Utility")
 

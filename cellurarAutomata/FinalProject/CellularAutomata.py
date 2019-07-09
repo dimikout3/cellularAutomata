@@ -6,7 +6,7 @@ import time
 
 utilityDecay = 0.975
 
-NEGATIVE_VEH_DECAY = 0.9
+NEGATIVE_VEH_DECAY = 0.8
 
 POLICE_DECAY = 0.9
 
@@ -63,10 +63,16 @@ class CellularAutomata:
         # oilMass = np.zeros([self.rows, self.columns])
         self.utility = np.zeros([self.rows, self.columns])
 
-        self.updateCounter = 0
+        self.updateUtilityEgoVeh()
+
+        self.updateUtilityPoliceVeh()
+
+        self.updateUtilityBanks()
+
+        self.aggregateUtility()
 
         # self.updateUtility(self.previousBankLocation[:,:,0])
-        self.updateUtilityMulti()
+        # self.updateUtilityMulti()
 
 
     def distance(self, x, y, x2, y2):
@@ -78,47 +84,10 @@ class CellularAutomata:
         return d
 
 
-    def positiveUtility(self):
+    def updateUtilityEgoVeh(self):
 
         if VERBOSE and INFO:
-            print('[INFO]: calculating positive utility for banks')
-
-        rtn = np.zeros([self.rows, self.columns])
-
-        rtn[self.currentBankLocation[:,:,0]] = 1.0
-
-        for i in range(BANK_RANGE):
-            (x,y) = np.where(rtn>0.)
-
-            for x2,y2 in zip(x,y):
-
-                ego = rtn[x2][y2]
-                down = rtn[x2+1][y2]
-                up = rtn[x2-1][y2]
-                right = rtn[x2][y2+1]
-                left = rtn[x2][y2-1]
-
-                avgMatrix = np.array([ego,down,left,right,up])
-                avgWeights = avgMatrix != 0
-                utilityValue = np.average(avgMatrix, weights=avgWeights)*utilityDecay
-                # utilityValue = ego*utilityDecay
-
-                rtn[x2][y2+1] = utilityValue if (rtn[x2][y2+1]==0. and self.freeSpace[x2][y2+1][0] ) else rtn[x2][y2+1]
-                rtn[x2][y2-1] = utilityValue if (rtn[x2][y2-1]==0. and self.freeSpace[x2][y2-1][0] ) else rtn[x2][y2-1]
-                rtn[x2-1][y2] = utilityValue if (rtn[x2-1][y2]==0. and self.freeSpace[x2-1][y2][0] ) else rtn[x2-1][y2]
-                rtn[x2+1][y2] = utilityValue if (rtn[x2+1][y2]==0. and self.freeSpace[x2+1][y2][0] ) else rtn[x2+1][y2]
-
-        # self.print()
-        # plt.imshow(rtn,cmap='gray')
-        # plt.colorbar()
-        # plt.show()
-        return rtn
-
-
-    def negativeUtilityVeh(self):
-
-        if VERBOSE and INFO:
-            print('[INFO]: calculating negative utility for ego veh')
+            print('[INFO]: updating utility for ego veh')
 
         rtn = np.zeros([self.rows, self.columns])
 
@@ -148,13 +117,12 @@ class CellularAutomata:
                 rtn[x2-1][y2] = utilityValue if (rtn[x2-1][y2]==0. and self.freeSpace[x2-1][y2][0] ) else rtn[x2-1][y2]
                 rtn[x2+1][y2] = utilityValue if (rtn[x2+1][y2]==0. and self.freeSpace[x2+1][y2][0] ) else rtn[x2+1][y2]
 
-        return rtn*(-1)
+        self.utilityEgoVeh = rtn*(-1)
 
 
-    def negativeUtilityPol(self):
-
+    def updateUtilityPoliceVeh(self):
         if VERBOSE and INFO:
-            print('[INFO]: calculating negative police utility')
+            print('[INFO]: updating utility for police veh')
 
         rtn = np.zeros([self.rows, self.columns])
 
@@ -181,20 +149,48 @@ class CellularAutomata:
                 rtn[x2-1][y2] = utilityValue if (rtn[x2-1][y2]==0. and self.freeSpace[x2-1][y2][0] ) else rtn[x2-1][y2]
                 rtn[x2+1][y2] = utilityValue if (rtn[x2+1][y2]==0. and self.freeSpace[x2+1][y2][0] ) else rtn[x2+1][y2]
 
-        return rtn*(-1)
+        self.utilityPoliceVeh = rtn*(-1)
 
 
-    def updateUtilityMulti(self):
+    def updateUtilityBanks(self):
 
         if VERBOSE and INFO:
-            print('[INFO]: updating utility ...')
+            print('[INFO]: updating utility for banks')
 
-        posUtility = self.positiveUtility()
-        negPoliceUtily = self.negativeUtilityPol()
-        negVehUtility = self.negativeUtilityVeh()
+        rtn = np.zeros([self.rows, self.columns])
 
-        self.utility = posUtility + negPoliceUtily + negVehUtility
-        self.print(self.utility, title='Aggregated Utility')
+        rtn[self.currentBankLocation[:,:,0]] = 1.0
+
+        for i in range(BANK_RANGE):
+            (x,y) = np.where(rtn>0.)
+
+            for x2,y2 in zip(x,y):
+
+                ego = rtn[x2][y2]
+                down = rtn[x2+1][y2]
+                up = rtn[x2-1][y2]
+                right = rtn[x2][y2+1]
+                left = rtn[x2][y2-1]
+
+                avgMatrix = np.array([ego,down,left,right,up])
+                avgWeights = avgMatrix != 0
+                utilityValue = np.average(avgMatrix, weights=avgWeights)*utilityDecay
+                # utilityValue = ego*utilityDecay
+
+                rtn[x2][y2+1] = utilityValue if (rtn[x2][y2+1]==0. and self.freeSpace[x2][y2+1][0] ) else rtn[x2][y2+1]
+                rtn[x2][y2-1] = utilityValue if (rtn[x2][y2-1]==0. and self.freeSpace[x2][y2-1][0] ) else rtn[x2][y2-1]
+                rtn[x2-1][y2] = utilityValue if (rtn[x2-1][y2]==0. and self.freeSpace[x2-1][y2][0] ) else rtn[x2-1][y2]
+                rtn[x2+1][y2] = utilityValue if (rtn[x2+1][y2]==0. and self.freeSpace[x2+1][y2][0] ) else rtn[x2+1][y2]
+
+        self.utilityBanks = rtn
+
+
+    def aggregateUtility(self):
+
+        if VERBOSE and INFO:
+            print('[INFO]: Aggregating utilities ...')
+
+        self.utility = self.utilityEgoVeh + self.utilityBanks + self.utilityPoliceVeh
 
 
     def print(self,img, title='No Title Given'):
@@ -281,10 +277,17 @@ class CellularAutomata:
 
             self.utility = np.zeros([self.rows, self.columns])
 
-            self.updateUtilityMulti()
+            self.updateUtilityBanks()
+
+            self.updateUtilityEgoVeh()
+
+            self.aggregateUtility()
+
             self.previousBankLocation = self.currentBankLocation
 
-        elif (self.currentPoliceLocation != self.previousPoliceLocation).any() and (updateStep):
+            self.print(self.utility, title="Aggregated Utility")
+
+        if (self.currentPoliceLocation != self.previousPoliceLocation).any() and (updateStep):
 
             xPolice, yPolice = self.locatePoliceVeh()
             dist = self.distance(x,y,xPolice, yPolice)
@@ -296,8 +299,13 @@ class CellularAutomata:
 
                 self.utility = np.zeros([self.rows, self.columns])
 
-                self.updateUtilityMulti()
+                self.updateUtilityPoliceVeh()
+
+                self.aggregateUtility()
+
                 self.previousPoliceLocation = self.currentPoliceLocation
+
+                self.print(self.utility, title="Aggregated Utility")
 
 
 

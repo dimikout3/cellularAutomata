@@ -14,8 +14,7 @@ VEH_RANGE = 40
 POLICE_RANGE = 40
 BANK_RANGE = 90
 
-UPDATEMOD = 15
-
+UPDATEMOD = 5
 DIST = 30
 
 # car  -> rgb(223, 183, 85)
@@ -30,6 +29,7 @@ STRONGSIDE = 10
 VERBOSE = True
 INFO = True
 SIM = True
+DEBUG = False
 
 MOVE_2_ACTION = {"UP":2,
                  "RIGHT":3,
@@ -193,15 +193,35 @@ class CellularAutomata:
         self.utility = self.utilityEgoVeh + self.utilityBanks + self.utilityPoliceVeh
 
 
-    def print(self,img, title='No Title Given'):
+    def print(self,img=[], title='No Title Given'):
 
         # plt.imshow(self.freeSpace[:,:,0],cmap='gray')
         # plt.imshow(self.previousBankLocation[:,:,0],cmap='gray')
-        plt.imshow(img,cmap='jet')
-        plt.title(title + str(self.simStep))
-        plt.colorbar()
-        plt.show(block=False)
-        plt.pause(3)
+        defaultAspect = 0.75
+        ig, ax = plt.subplots(nrows=2, ncols=2)
+
+        ax[0,0].imshow(self.utilityEgoVeh,aspect = defaultAspect)
+        ax[0,0].set_title('Utility of Ego Veh')
+
+        ax[0,1].imshow(self.utilityPoliceVeh, aspect = defaultAspect)
+        ax[0,1].set_title('Utility of Police Veh')
+
+        ax[1,0].imshow(self.utilityBanks, aspect = defaultAspect)
+        ax[1,0].set_title('Utility of Banks')
+
+        ax[1,1].imshow(self.utility, aspect = defaultAspect)
+        ax[1,1].set_title('Aggregated Utility')
+
+
+        # plt.imshow(img,cmap='jet')
+        # plt.title(title + str(self.simStep))
+        # plt.colorbar()
+        if DEBUG:
+            plt.show()
+        else:
+            plt.show(block=False)
+            plt.pause(3)
+
         plt.close()
 
 
@@ -306,8 +326,6 @@ class CellularAutomata:
                 self.previousPoliceLocation = self.currentPoliceLocation
 
                 self.print(self.utility, title="Aggregated Utility")
-
-
 
         s_utility = self.updatesurroundingUtility(x,y)
 

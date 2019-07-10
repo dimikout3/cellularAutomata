@@ -4,13 +4,12 @@ import matplotlib.pyplot as plt
 import pdb
 import time
 
-utilityDecay = 0.975
+plt.style.use('seaborn')
 
-NEGATIVE_VEH_DECAY = 0.8
+UTILITYDECAY = 0.97
+POLICE_DECAY = 0.95
 
-POLICE_DECAY = 0.9
-
-VEH_RANGE = 40
+CLEAR_RANGE = 1
 POLICE_RANGE = 40
 BANK_RANGE = 90
 
@@ -26,13 +25,15 @@ UPDATE_INTERVAL_POLICE = 5
 # free -> rgb(0,0,0)
 # police -> rgb(24,26,167)
 
-WEAKSIDE = 1
-STRONGSIDE = 10
+WEAKSIDE = 2
+STRONGSIDE = 8
 
 VERBOSE = True
 INFO = True
 SIM = True
 DEBUG = False
+RECORD = True
+RECORD_INTERVAL = 5
 
 MOVE_2_ACTION = {"UP":2,
                  "RIGHT":3,
@@ -66,8 +67,6 @@ class CellularAutomata:
         # oilMass = np.zeros([self.rows, self.columns])
         self.utility = np.zeros([self.rows, self.columns])
 
-        self.updateUtilityEgoVeh()
-
         self.updateUtilityPoliceVeh()
 
         self.updateUtilityBanks()
@@ -77,53 +76,21 @@ class CellularAutomata:
         self.updateStepBank = UPDATE_INTERVAL_BANK
         self.updateStepPolice = UPDATE_INTERVAL_POLICE
 
+        self.print()
+
         # self.updateUtility(self.previousBankLocation[:,:,0])
         # self.updateUtilityMulti()
 
 
-    def distance(self, x, y, x2, y2):
+    def distance(self, x, y, xList, yList):
 
-        d = math.sqrt( ((x-x2)**2) + ((y-y2)**2) )
+        dList =[]
+        for xl,yl in zip(xList,yList):
 
-        if d<1:d = 1
+            d = math.sqrt( ((x-xl)**2) + ((y-yl)**2) )
+            dList.append(d)
 
-        return d
-
-
-    def updateUtilityEgoVeh(self):
-
-        if VERBOSE and INFO:
-            print('[INFO]: updating utility for ego veh')
-
-        rtn = np.zeros([self.rows, self.columns])
-
-        xEgo,yEgo = self.locateEgoVeh()
-
-        rtn[xEgo][yEgo] = 2.0
-
-        for i in range(VEH_RANGE):
-            (x,y) = np.where(rtn>0.)
-
-            for x2,y2 in zip(x,y):
-
-                ego = rtn[x2][y2]
-                down = rtn[x2+1][y2]
-                up = rtn[x2-1][y2]
-                right = rtn[x2][y2+1]
-                left = rtn[x2][y2-1]
-
-                avgMatrix = np.array([ego,down,left,right,up])
-                avgWeights = avgMatrix != 0
-                # dist = self.distance(xEgo, yEgo, x2, y2)
-                utilityValue = np.average(avgMatrix, weights=avgWeights)*NEGATIVE_VEH_DECAY*(((VEH_RANGE-i)/VEH_RANGE)**2)
-                # utilityValue = ego*utilityDecay
-
-                rtn[x2][y2+1] = utilityValue if (rtn[x2][y2+1]==0. and self.freeSpace[x2][y2+1][0] ) else rtn[x2][y2+1]
-                rtn[x2][y2-1] = utilityValue if (rtn[x2][y2-1]==0. and self.freeSpace[x2][y2-1][0] ) else rtn[x2][y2-1]
-                rtn[x2-1][y2] = utilityValue if (rtn[x2-1][y2]==0. and self.freeSpace[x2-1][y2][0] ) else rtn[x2-1][y2]
-                rtn[x2+1][y2] = utilityValue if (rtn[x2+1][y2]==0. and self.freeSpace[x2+1][y2][0] ) else rtn[x2+1][y2]
-
-        self.utilityEgoVeh = rtn*(-1)
+        return min(dList) if dList != [] else 0
 
 
     def updateUtilityPoliceVeh(self):
@@ -147,8 +114,9 @@ class CellularAutomata:
 
                 avgMatrix = np.array([ego,down,left,right,up])
                 avgWeights = avgMatrix != 0
-                utilityValue = np.average(avgMatrix, weights=avgWeights)*POLICE_DECAY*(((POLICE_RANGE-i)/POLICE_RANGE)**2)
-                # utilityValue = ego*utilityDecay
+                # utilityValue = np.average(avgMatrix, weights=avgWeights)*POLICE_DECAY*(((POLICE_RANGE-i)/POLICE_RANGE)**2)
+                utilityValue = np.average(avgMatrix, weights=avgWeights)*POLICE_DECAY
+                # utilityValue = ego*UTILITYDECAY
 
                 rtn[x2][y2+1] = utilityValue if (rtn[x2][y2+1]==0. and self.freeSpace[x2][y2+1][0] ) else rtn[x2][y2+1]
                 rtn[x2][y2-1] = utilityValue if (rtn[x2][y2-1]==0. and self.freeSpace[x2][y2-1][0] ) else rtn[x2][y2-1]
@@ -156,6 +124,32 @@ class CellularAutomata:
                 rtn[x2+1][y2] = utilityValue if (rtn[x2+1][y2]==0. and self.freeSpace[x2+1][y2][0] ) else rtn[x2+1][y2]
 
         self.utilityPoliceVeh = rtn*(-1)
+
+
+    def clearBankNoise(self, rtn):
+
+        if VERBOSE and INFO:
+            print('[INFO]: clearing noise banks')
+
+        toZero = []
+
+        for i in range(CLEAR_RANGE):
+            (x,y) = np.where(rtn>0.)
+
+            for x2,y2 in zip(x,y):
+
+                down = (rtn[x2+1][y2] == 0)
+                up = (rtn[x2-1][y2] == 0)
+                right = (rtn[x2][y2+1] == 0)
+                left = (rtn[x2][y2-1] == 0)
+
+                if down or up or right or left:
+                    toZero.append([x2,y2])
+
+            for x0,y0 in toZero:
+                rtn[x0][y0] = 0.
+
+        return rtn
 
 
     def updateUtilityBanks(self):
@@ -166,6 +160,8 @@ class CellularAutomata:
         rtn = np.zeros([self.rows, self.columns])
 
         rtn[self.currentBankLocation[:,:,0]] = 1.0
+
+        rtn = self.clearBankNoise(rtn)
 
         for i in range(BANK_RANGE):
             (x,y) = np.where(rtn>0.)
@@ -180,14 +176,15 @@ class CellularAutomata:
 
                 avgMatrix = np.array([ego,down,left,right,up])
                 avgWeights = avgMatrix != 0
-                utilityValue = np.average(avgMatrix, weights=avgWeights)*utilityDecay
-                # utilityValue = ego*utilityDecay
+                utilityValue = np.average(avgMatrix, weights=avgWeights)*UTILITYDECAY
+                # utilityValue = ego*UTILITYDECAY
 
                 rtn[x2][y2+1] = utilityValue if (rtn[x2][y2+1]==0. and self.freeSpace[x2][y2+1][0] ) else rtn[x2][y2+1]
                 rtn[x2][y2-1] = utilityValue if (rtn[x2][y2-1]==0. and self.freeSpace[x2][y2-1][0] ) else rtn[x2][y2-1]
                 rtn[x2-1][y2] = utilityValue if (rtn[x2-1][y2]==0. and self.freeSpace[x2-1][y2][0] ) else rtn[x2-1][y2]
                 rtn[x2+1][y2] = utilityValue if (rtn[x2+1][y2]==0. and self.freeSpace[x2+1][y2][0] ) else rtn[x2+1][y2]
 
+            self.printSingle(rtn,'Utility Banks {} [step]'.format(i),i)
         self.utilityBanks = rtn
 
 
@@ -196,34 +193,63 @@ class CellularAutomata:
         if VERBOSE and INFO:
             print('[INFO]: Aggregating utilities ...')
 
-        self.utility = self.utilityEgoVeh + self.utilityBanks + self.utilityPoliceVeh
+        self.utility = self.utilityBanks + self.utilityPoliceVeh
 
+
+    def printSingle(self, img=[], title='No Title Given', ustep=0):
+
+        plt.imshow(img,cmap='jet',vmin=-1,vmax=1)
+        plt.title(title)
+        cbr = plt.colorbar()
+        cbr.set_label('Utility')
+
+        plt.grid(False)
+
+        if DEBUG:
+            plt.show()
+        elif RECORD:
+            plt.savefig('results/utility'+str(ustep)+'.png')
+        else:
+            plt.show(block=False)
+            plt.pause(3)
+
+        plt.close()
 
     def print(self,img=[], title='No Title Given'):
 
         # plt.imshow(self.freeSpace[:,:,0],cmap='gray')
         # plt.imshow(self.previousBankLocation[:,:,0],cmap='gray')
-        defaultAspect = 0.75
+        defaultAspect = 1
         ig, ax = plt.subplots(nrows=2, ncols=2)
 
-        ax[0,0].imshow(self.utilityEgoVeh,aspect = defaultAspect)
-        ax[0,0].set_title('Utility of Ego Veh')
+        ax[0,0].imshow(self.observation, aspect = defaultAspect)
+        ax[0,0].set_title('Enviroment: {}[s]'.format(self.simStep))
+        ax[0,0].grid(False)
 
-        ax[0,1].imshow(self.utilityPoliceVeh, aspect = defaultAspect)
+        ax[0,1].imshow(self.utilityPoliceVeh, aspect = defaultAspect,
+        cmap='jet', vmin=-1, vmax=1)
         ax[0,1].set_title('Utility of Police Veh')
+        ax[0,1].grid(False)
 
-        ax[1,0].imshow(self.utilityBanks, aspect = defaultAspect)
+        ax[1,0].imshow(self.utilityBanks, aspect = defaultAspect,
+        cmap='jet', vmin=-1, vmax=1)
         ax[1,0].set_title('Utility of Banks')
+        ax[1,0].grid(False)
 
-        ax[1,1].imshow(self.utility, aspect = defaultAspect)
+        ax[1,1].imshow(self.utility, aspect = defaultAspect,
+        cmap='jet', vmin=-1, vmax=1)
         ax[1,1].set_title('Aggregated Utility')
+        ax[1,1].grid(False)
 
+        plt.tight_layout()
 
         # plt.imshow(img,cmap='jet')
         # plt.title(title + str(self.simStep))
         # plt.colorbar()
         if DEBUG:
             plt.show()
+        elif RECORD:
+            plt.savefig('results/'+str(self.simStep)+'.png')
         else:
             plt.show(block=False)
             plt.pause(3)
@@ -238,7 +264,7 @@ class CellularAutomata:
 
         (x,y) = np.where(egoVeh[:,:,0])
 
-        return x[5],y[5]
+        return x[10],y[10]
 
 
     def locatePoliceVeh(self):
@@ -248,7 +274,7 @@ class CellularAutomata:
 
         (x,y) = np.where(policeVeh[:,:,0])
 
-        return x[0],y[0]
+        return x,y
 
 
     def updatesurroundingUtility(self,x,y):
@@ -260,19 +286,10 @@ class CellularAutomata:
         rightMatrix = self.utility[x-WEAKSIDE:x+WEAKSIDE,y:y+STRONGSIDE]
         leftMatrix = self.utility[x-WEAKSIDE:x+WEAKSIDE,y-STRONGSIDE:y]
 
-        upRightMatrix = self.utility[x-STRONGSIDE:x][y:y+STRONGSIDE]
-        upLeftMatrix = self.utility[x-STRONGSIDE:x][y-STRONGSIDE:y]
-        downRightMatrix = self.utility[x:x+STRONGSIDE][y:y+STRONGSIDE]
-        downLeftMatrxi = self.utility[x:x+STRONGSIDE][y-STRONGSIDE:y]
-
-        surr_utility = {"UP":np.average(upMatrix, weights = upMatrix!= 0.),
-                        "RIGHT":np.average(rightMatrix, weights = rightMatrix!= 0.),
-                        "LEFT":np.average(leftMatrix, weights = leftMatrix!= 0.),
-                        "DOWN":np.average(downMatrix, weights = downMatrix!= 0.)}
-                        # "UPRIGHT":np.average(upRightMatrix, weights = upRightMatrix!= 0.),
-                        # "UPLEFT":np.average(upLeftMatrix, weights = upLeftMatrix!= 0.),
-                        # "DOWNRIGHT":np.average(downRightMatrix, weights = downRightMatrix!= 0.),
-                        # "DOWNLEFT":np.average(downLeftMatrxi, weights = downLeftMatrxi!= 0.) }
+        surr_utility = {"RIGHT":np.sum(rightMatrix)/(STRONGSIDE*WEAKSIDE),
+                        "UP":np.sum(upMatrix)/(STRONGSIDE*WEAKSIDE),
+                        "LEFT":np.sum(leftMatrix)/(STRONGSIDE*WEAKSIDE),
+                        "DOWN":np.sum(downMatrix)/(STRONGSIDE*WEAKSIDE)}
 
         if VERBOSE and SIM:
             print('[SIM]: surrounding utility dict',surr_utility)
@@ -306,8 +323,6 @@ class CellularAutomata:
 
             self.updateUtilityBanks()
 
-            self.updateUtilityEgoVeh()
-
             self.aggregateUtility()
 
             self.previousBankLocation = self.currentBankLocation
@@ -339,6 +354,10 @@ class CellularAutomata:
                 self.print(self.utility, title="Aggregated Utility")
 
         s_utility = self.updatesurroundingUtility(x,y)
+
+        updateRecord = self.simStep%RECORD_INTERVAL == 0
+        if RECORD and updateRecord:
+            self.print()
 
         if VERBOSE and SIM:
             print('[SIM]: Next action is',s_utility)

@@ -279,8 +279,6 @@ class CellularAutomata:
 
     def updatesurroundingUtility(self,x,y):
 
-        # pdb.set_trace()
-
         upMatrix = self.utility[x-STRONGSIDE:x,y-WEAKSIDE:y+WEAKSIDE]
         downMatrix = self.utility[x:x+STRONGSIDE,y-WEAKSIDE:y+WEAKSIDE]
         rightMatrix = self.utility[x-WEAKSIDE:x+WEAKSIDE,y:y+STRONGSIDE]
@@ -322,11 +320,9 @@ class CellularAutomata:
             self.utility = np.zeros([self.rows, self.columns])
 
             self.updateUtilityBanks()
-
             self.aggregateUtility()
 
             self.previousBankLocation = self.currentBankLocation
-
             self.updateStepBank = self.simStep + UPDATE_INTERVAL_BANK
 
             self.print(self.utility, title="Aggregated Utility")
@@ -344,11 +340,9 @@ class CellularAutomata:
                 self.utility = np.zeros([self.rows, self.columns])
 
                 self.updateUtilityPoliceVeh()
-
                 self.aggregateUtility()
 
                 self.previousPoliceLocation = self.currentPoliceLocation
-
                 self.updateStepPolice = self.simStep + UPDATE_INTERVAL_POLICE
 
                 self.print(self.utility, title="Aggregated Utility")

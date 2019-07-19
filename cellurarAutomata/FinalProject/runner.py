@@ -1,3 +1,5 @@
+#! /usr/bin/python3
+
 import gym
 import numpy as np
 import optparse

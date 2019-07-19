@@ -3,6 +3,7 @@ import math
 import matplotlib.pyplot as plt
 import pdb
 import time
+import os
 
 plt.style.use('seaborn')
 
@@ -246,6 +247,9 @@ class CellularAutomata:
         # plt.imshow(img,cmap='jet')
         # plt.title(title + str(self.simStep))
         # plt.colorbar()
+        if not os.path.exists("results"):
+            os.mkdir("results")
+
         if DEBUG:
             plt.show()
         elif RECORD:
@@ -264,7 +268,10 @@ class CellularAutomata:
 
         (x,y) = np.where(egoVeh[:,:,0])
 
-        return x[10],y[10]
+        xInt = int(np.average(x))
+        yInt = int(np.average(y))
+
+        return xInt,yInt
 
 
     def locatePoliceVeh(self):

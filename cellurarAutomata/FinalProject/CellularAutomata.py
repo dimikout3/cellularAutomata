@@ -77,7 +77,7 @@ class CellularAutomata:
         self.updateStepBank = UPDATE_INTERVAL_BANK
         self.updateStepPolice = UPDATE_INTERVAL_POLICE
 
-        self.printCA()
+        self.printFullEnv()
 
         # self.updateUtility(self.previousBankLocation[:,:,0])
         # self.updateUtilityMulti()
@@ -216,7 +216,7 @@ class CellularAutomata:
 
         plt.close()
 
-    def printCA(self,img=[], title='No Title Given'):
+    def printFullEnv(self):
 
         # plt.imshow(self.freeSpace[:,:,0],cmap='gray')
         # plt.imshow(self.previousBankLocation[:,:,0],cmap='gray')
@@ -244,9 +244,6 @@ class CellularAutomata:
 
         plt.tight_layout()
 
-        # plt.imshow(img,cmap='jet')
-        # plt.title(title + str(self.simStep))
-        # plt.colorbar()
         if not os.path.exists("results"):
             os.mkdir("results")
 
@@ -332,7 +329,7 @@ class CellularAutomata:
             self.previousBankLocation = self.currentBankLocation
             self.updateStepBank = self.simStep + UPDATE_INTERVAL_BANK
 
-            self.printCA(self.utility, title="Aggregated Utility")
+            self.printFullEnv()
 
         if (self.currentPoliceLocation != self.previousPoliceLocation).any() and (self.updateStepPolice <= self.simStep):
 
@@ -352,13 +349,13 @@ class CellularAutomata:
                 self.previousPoliceLocation = self.currentPoliceLocation
                 self.updateStepPolice = self.simStep + UPDATE_INTERVAL_POLICE
 
-                self.printCA(self.utility, title="Aggregated Utility")
+                self.printFullEnv()
 
         s_utility = self.updatesurroundingUtility(x,y)
 
         updateRecord = self.simStep%RECORD_INTERVAL == 0
         if RECORD and updateRecord:
-            self.printCA()
+            self.printFullEnv()
 
         if VERBOSE and SIM:
             print('[SIM]: Next action is',s_utility)

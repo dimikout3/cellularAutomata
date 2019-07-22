@@ -15,7 +15,7 @@ POLICE_RANGE = 40
 BANK_RANGE = 90
 
 UPDATEMOD = 5
-DIST = 30
+DIST = 100
 
 UPDATE_INTERVAL_BANK = 15
 UPDATE_INTERVAL_POLICE = 5
@@ -46,6 +46,7 @@ MOVE_2_ACTION = {"UP":2,
                  "DOWNLEFT":9}
 
 class CellularAutomata:
+
 
     def __init__(self, observationEnv):
 
@@ -103,26 +104,22 @@ class CellularAutomata:
         rtn[self.currentPoliceLocation[:,:,0]] = 1.0
 
         for i in range(POLICE_RANGE):
-            (x,y) = np.where(rtn>0.)
+            (x,y) = self.boundaries(rtn)
 
             for x2,y2 in zip(x,y):
 
-                ego = rtn[x2][y2]
                 down = rtn[x2+1][y2]
                 up = rtn[x2-1][y2]
                 right = rtn[x2][y2+1]
                 left = rtn[x2][y2-1]
 
-                avgMatrix = np.array([ego,down,left,right,up])
+                avgMatrix = np.array([down,left,right,up])
                 avgWeights = avgMatrix != 0
                 # utilityValue = np.average(avgMatrix, weights=avgWeights)*POLICE_DECAY*(((POLICE_RANGE-i)/POLICE_RANGE)**2)
                 utilityValue = np.average(avgMatrix, weights=avgWeights)*POLICE_DECAY
                 # utilityValue = ego*UTILITYDECAY
 
-                rtn[x2][y2+1] = utilityValue if (rtn[x2][y2+1]==0. and self.freeSpace[x2][y2+1][0] ) else rtn[x2][y2+1]
-                rtn[x2][y2-1] = utilityValue if (rtn[x2][y2-1]==0. and self.freeSpace[x2][y2-1][0] ) else rtn[x2][y2-1]
-                rtn[x2-1][y2] = utilityValue if (rtn[x2-1][y2]==0. and self.freeSpace[x2-1][y2][0] ) else rtn[x2-1][y2]
-                rtn[x2+1][y2] = utilityValue if (rtn[x2+1][y2]==0. and self.freeSpace[x2+1][y2][0] ) else rtn[x2+1][y2]
+                rtn[x2][y2] = utilityValue
 
         self.utilityPoliceVeh = rtn*(-1)
 
@@ -169,6 +166,7 @@ class CellularAutomata:
 
         return np.where(bound)
 
+
     def updateUtilityBanks(self):
 
         if VERBOSE and INFO:
@@ -196,7 +194,7 @@ class CellularAutomata:
 
                 rtn[x2][y2] = utilityValue
 
-            self.printSingle(rtn,'Utility Banks {} [step]'.format(i),i)
+            # self.printSingle(rtn,'Utility Banks {} [step]'.format(i),i)
         self.utilityBanks = rtn
 
 
@@ -226,6 +224,7 @@ class CellularAutomata:
             plt.pause(3)
 
         plt.close()
+
 
     def printFullEnv(self):
 

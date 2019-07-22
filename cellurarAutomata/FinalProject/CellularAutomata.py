@@ -153,6 +153,22 @@ class CellularAutomata:
         return rtn
 
 
+    def boundaries(self, rtn):
+
+        r1 = np.roll(rtn,1,axis=0)
+        r2 = np.roll(rtn,-1,axis=0)
+        r3 = np.roll(rtn,1,axis=1)
+        r4 = np.roll(rtn,-1,axis=1)
+
+        xor1 = np.logical_and( np.logical_xor(r1, rtn) , self.freeSpace[:,:,0])
+        xor2 = np.logical_and( np.logical_xor(r2, rtn) , self.freeSpace[:,:,0])
+        xor3 = np.logical_and( np.logical_xor(r3, rtn) , self.freeSpace[:,:,0])
+        xor4 = np.logical_and( np.logical_xor(r4, rtn) , self.freeSpace[:,:,0])
+
+        bound = np.logical_or( np.logical_or(xor1,xor2), np.logical_or(xor3,xor4))
+
+        return np.where(bound)
+
     def updateUtilityBanks(self):
 
         if VERBOSE and INFO:
@@ -165,25 +181,20 @@ class CellularAutomata:
         rtn = self.clearBankNoise(rtn)
 
         for i in range(BANK_RANGE):
-            (x,y) = np.where(rtn>0.)
+            (x,y) = self.boundaries(rtn)
 
             for x2,y2 in zip(x,y):
 
-                ego = rtn[x2][y2]
                 down = rtn[x2+1][y2]
                 up = rtn[x2-1][y2]
                 right = rtn[x2][y2+1]
                 left = rtn[x2][y2-1]
 
-                avgMatrix = np.array([ego,down,left,right,up])
+                avgMatrix = np.array([down,left,right,up])
                 avgWeights = avgMatrix != 0
                 utilityValue = np.average(avgMatrix, weights=avgWeights)*UTILITYDECAY
-                # utilityValue = ego*UTILITYDECAY
 
-                rtn[x2][y2+1] = utilityValue if (rtn[x2][y2+1]==0. and self.freeSpace[x2][y2+1][0] ) else rtn[x2][y2+1]
-                rtn[x2][y2-1] = utilityValue if (rtn[x2][y2-1]==0. and self.freeSpace[x2][y2-1][0] ) else rtn[x2][y2-1]
-                rtn[x2-1][y2] = utilityValue if (rtn[x2-1][y2]==0. and self.freeSpace[x2-1][y2][0] ) else rtn[x2-1][y2]
-                rtn[x2+1][y2] = utilityValue if (rtn[x2+1][y2]==0. and self.freeSpace[x2+1][y2][0] ) else rtn[x2+1][y2]
+                rtn[x2][y2] = utilityValue
 
             self.printSingle(rtn,'Utility Banks {} [step]'.format(i),i)
         self.utilityBanks = rtn
